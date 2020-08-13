@@ -77,7 +77,8 @@ class CommentController {
       }
 
       const modifications = {
-        ...commentData
+        ...commentData,
+        edited: true
       }
       modifications.signature = 'new signature' // TODO: calculate signature
       await _this.Comment.findByIdAndUpdate(

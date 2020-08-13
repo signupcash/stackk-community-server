@@ -28,7 +28,8 @@ describe('routes : comments', () => {
       replyTo: 'reply to',
       author: 'Some Author',
       text: 'Nice comment',
-      listed: true
+      listed: true,
+      edited: false
     }
     commentObj.signature = 'signed' // TODO: calculate real dignature
 
@@ -189,6 +190,10 @@ describe('routes : comments', () => {
       assert(
         updated.author === savedComment.author,
         'author is expected to not change'
+      )
+      assert(
+        updated.edited === true,
+        'edited is expected to be true'
       )
       assert(
         updated.signature === 'new signature',

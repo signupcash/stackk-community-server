@@ -6,6 +6,7 @@ const Comment = new mongoose.Schema({
   author: { type: String, required: true },
   text: { type: String, required: true },
   listed: { type: Boolean, default: true },
+  edited: { type: Boolean, default: false },
   signature: { type: String, required: true }
 })
 
