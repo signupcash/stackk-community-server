@@ -1,3 +1,4 @@
+const validator = require('../../middleware/validators')
 const InfoController = require('./controller')
 const infoController = new InfoController()
 
@@ -7,7 +8,10 @@ module.exports.routes = [
   {
     method: 'PUT',
     route: '/:moderator',
-    handlers: [infoController.createInfo]
+    handlers: [
+      validator.ensureModSignature,
+      infoController.createInfo
+    ]
   },
   {
     method: 'GET',

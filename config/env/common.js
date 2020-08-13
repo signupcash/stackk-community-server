@@ -6,6 +6,6 @@
 const { version } = require('../../package.json')
 
 module.exports = {
-  port: process.env.PORT || 5000,
+  port: process.env.STAKK_PORT || 5000,
   version: version || '1.1.1'
 }

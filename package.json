@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node index.js",
     "lint": "standard --env mocha --fix",
-    "test": "export KOA_ENV=test && ./node_modules/mocha/bin/_mocha"
+    "test:wallet": "node ./util/create_wallet.js",
+    "test": "export KOA_ENV=test && source .env.test && ./node_modules/mocha/bin/_mocha"
   },
   "keywords": [
     "api",
@@ -32,6 +33,7 @@
     "standard": "^14.3.4"
   },
   "dependencies": {
+    "@chris.troutner/bch-js": "^3.4.1",
     "add": "^2.0.6",
     "axios": "^0.19.2",
     "kcors": "^2.2.2",

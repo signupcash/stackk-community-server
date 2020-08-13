@@ -63,4 +63,7 @@ coverage
 database/
 system-user-*.json
 
+.env.test
+wallet.json
+
 !README.md

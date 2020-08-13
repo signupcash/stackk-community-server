@@ -1,3 +1,5 @@
+const BCHJS = require('@chris.troutner/bch-js')
+const bchjs = new BCHJS()
 const app = require('../bin/server')
 const config = require('../config')
 const testUtils = require('./utils')
@@ -7,6 +9,18 @@ const axios = require('axios').default
 const Comment = require('../src/models/comment')
 
 const context = {}
+let moderatorWallet = {}
+let userWallet = {}
+try {
+  const walletInfo = require('../wallet.json')
+  moderatorWallet = walletInfo.addresses['0']
+  userWallet = walletInfo.addresses['1']
+} catch (err) {
+  console.log(
+    'Could not open wallet.json. Generate a wallet with "yarn test:wallet".'
+  )
+  process.exit(0)
+}
 
 const LOCALHOST = `http://localhost:${config.port}`
 const TX = '123456789'
@@ -295,7 +309,11 @@ describe('routes : comments', () => {
     it('should throw error if commentId is missing', async () => {
       try {
         const payload = {}
-        const result = await testUtils.delistComment(payload, savedComment._id)
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          moderatorWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.delistComment(payload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
@@ -309,8 +327,11 @@ describe('routes : comments', () => {
         const payload = {
           commentId: 'non-valid'
         }
-
-        const result = await testUtils.delistComment(payload, savedComment._id)
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          moderatorWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.delistComment(payload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
@@ -323,15 +344,41 @@ describe('routes : comments', () => {
       const payload = {
         commentId: 'non-existing'
       }
-      const result = await testUtils.delistComment(payload)
+      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+        moderatorWallet.WIF,
+        JSON.stringify(payload, null)
+      )
+      const result = await testUtils.delistComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       assert(result.data.status === 'success', 'success status expected')
+    })
+    it('should reject delisting when signature is invalid', async () => {
+      try {
+        const payload = {
+          commentId: savedComment._id
+        }
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          userWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.delistComment(payload, signature)
+        console.log(
+          `result stringified: ${JSON.stringify(result.data, null, 2)}`
+        )
+        assert(false, 'Unexpected result')
+      } catch (err) {
+        assert(err.response.status === 401, 'Error code 401 expected.')
+      }
     })
     it('should delist a comment', async () => {
       const payload = {
         commentId: savedComment._id
       }
-      const result = await testUtils.delistComment(payload)
+      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+        moderatorWallet.WIF,
+        JSON.stringify(payload, null)
+      )
+      const result = await testUtils.delistComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkDelisted = () => (Comment.findOne({ _id: payload.commentId }).exec())
       const delisted = await checkDelisted()

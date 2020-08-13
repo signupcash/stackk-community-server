@@ -104,12 +104,11 @@ async function deleteComment (commentObj, id = null) {
   return result
 }
 
-async function delistComment (commentObj, id = null) {
+async function delistComment (commentObj, signature, id = null) {
   const commentId = commentObj.commentId
   const payload = {
     commentId
   }
-  const signature = 'signed' // TODO: calculate real signature
   const options = {
     method: 'POST',
     url: `${LOCALHOST}/api/v1/mod/comment/${id || commentId}/delist`,
@@ -133,8 +132,7 @@ async function delistComment (commentObj, id = null) {
 //   description,
 //   title
 // }
-async function updateInfo (payload, moderator) {
-  const signature = 'signed' // TODO: calculate real signature
+async function updateInfo (moderator, payload, signature) {
   const options = {
     method: 'PUT',
     url: `${LOCALHOST}/api/v1/info/${moderator}`,

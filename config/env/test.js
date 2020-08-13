@@ -5,7 +5,7 @@
 */
 
 module.exports = {
-  moderator: process.env.MODERATOR || 'bitcoincash:CHANGE_THIS',
+  moderator: process.env.STAKK_MODERATOR,
   database: 'mongodb://localhost:27017/stackk-community-server-test',
   env: 'test'
 }

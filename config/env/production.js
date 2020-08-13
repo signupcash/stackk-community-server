@@ -8,7 +8,7 @@
 */
 
 module.exports = {
-  moderator: process.env.MODERATOR || 'bitcoincash:CHANGE_THIS',
+  moderator: process.env.STAKK_MODERATOR || 'bitcoincash:CHANGE_THIS',
   database: 'mongodb://localhost:27017/stackk-community-server',
   env: 'prod'
 }

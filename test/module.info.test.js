@@ -1,3 +1,5 @@
+const BCHJS = require('@chris.troutner/bch-js')
+const bchjs = new BCHJS()
 const config = require('../config')
 const testUtils = require('./utils')
 const assert = require('chai').assert
@@ -6,6 +8,18 @@ const axios = require('axios').default
 const Info = require('../src/models/info')
 
 const context = {}
+let moderatorWallet = {}
+let userWallet = {}
+try {
+  const walletInfo = require('../wallet.json')
+  moderatorWallet = walletInfo.addresses['0']
+  userWallet = walletInfo.addresses['1']
+} catch (err) {
+  console.log(
+    'Could not open wallet.json. Generate a wallet with "yarn test:wallet".'
+  )
+  process.exit(0)
+}
 
 const LOCALHOST = `http://localhost:${config.port}`
 
@@ -96,13 +110,38 @@ describe('routes : info', () => {
         const payload = {
           description: 'incomplete data'
         }
-        const result = await testUtils.updateInfo(payload, config.moderator)
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          moderatorWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.updateInfo(config.moderator, payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
         assert(false, 'Unexpected result')
       } catch (err) {
         assert(err.response.status === 422, 'Error code 422 expected.')
+      }
+    })
+    it('should reject creation when signature is invalid', async () => {
+      try {
+        const payload = {
+          moderatorName: 'new moderator',
+          moderatorEmail: 'new@test.com',
+          description: 'new description',
+          title: 'new title'
+        }
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          userWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.updateInfo('new-moderator', payload, signature)
+        console.log(
+          `result stringified: ${JSON.stringify(result.data, null, 2)}`
+        )
+        assert(false, 'Unexpected result')
+      } catch (err) {
+        assert(err.response.status === 401, 'Error code 401 expected.')
       }
     })
     it('should create info for non existing moderator', async () => {
@@ -113,7 +152,11 @@ describe('routes : info', () => {
         title: 'new title'
       }
 
-      const result = await testUtils.updateInfo(payload, 'new-moderator')
+      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+        moderatorWallet.WIF,
+        JSON.stringify(payload, null)
+      )
+      const result = await testUtils.updateInfo('new-moderator', payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkCreated = () => (Info.findOne({ moderatorAddress: 'new-moderator' }).exec())
       const created = await checkCreated()
@@ -146,7 +189,11 @@ describe('routes : info', () => {
         title: 'mod title'
       }
 
-      const result = await testUtils.updateInfo(payload, config.moderator)
+      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+        moderatorWallet.WIF,
+        JSON.stringify(payload, null)
+      )
+      const result = await testUtils.updateInfo(config.moderator, payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkUpdated = () => (Info.findOne({ moderatorAddress: config.moderator }).exec())
       const updated = await checkUpdated()
