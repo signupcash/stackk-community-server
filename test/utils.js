@@ -18,20 +18,13 @@ async function cleanDb () {
 }
 
 // This function is used to create new comments
-// commentObj = {
+// payload = {
 //   txId,
 //   replyTo,
 //   author,
 //   text
 // }
-async function createComment (commentObj) {
-  const payload = {
-    txId: commentObj.txId,
-    replyTo: commentObj.replyTo,
-    author: commentObj.author,
-    text: commentObj.text
-  }
-  const signature = 'signed' // TODO: calculate real signature
+async function createComment (payload, signature) {
   const options = {
     method: 'POST',
     url: `${LOCALHOST}/api/v1/comment`,
@@ -49,22 +42,13 @@ async function createComment (commentObj) {
 }
 
 // This function is used to update comments
-// commentObj = {
-//   txId,
-//   replyTo,
+// payload = {
 //   author,
+//   commentId,
 //   text
 // }
-async function updateComment (commentObj, id = null) {
-  const commentId = commentObj.commentId
-  const payload = {
-    commentId,
-    txId: commentObj.txId,
-    replyTo: commentObj.replyTo,
-    author: commentObj.author,
-    text: commentObj.text
-  }
-  const signature = 'signed' // TODO: calculate real signature
+async function updateComment (payload, signature, id = null) {
+  const commentId = payload.commentId
   const options = {
     method: 'PUT',
     url: `${LOCALHOST}/api/v1/comment/${id || commentId}`,
@@ -81,13 +65,14 @@ async function updateComment (commentObj, id = null) {
   return result
 }
 
-async function deleteComment (commentObj, id = null) {
-  const commentId = commentObj.commentId
-  const payload = {
-    commentId,
-    delete: true
-  }
-  const signature = 'signed' // TODO: calculate real signature
+// This function is used to delete comments
+// payload = {
+//   author,
+//   commentId,
+//   delete: true
+// }
+async function deleteComment (payload, signature, id = null) {
+  const commentId = payload.commentId
   const options = {
     method: 'DELETE',
     url: `${LOCALHOST}/api/v1/comment/${id || commentId}`,
@@ -104,11 +89,8 @@ async function deleteComment (commentObj, id = null) {
   return result
 }
 
-async function delistComment (commentObj, signature, id = null) {
-  const commentId = commentObj.commentId
-  const payload = {
-    commentId
-  }
+async function delistComment (payload, signature, id = null) {
+  const commentId = payload.commentId
   const options = {
     method: 'POST',
     url: `${LOCALHOST}/api/v1/mod/comment/${id || commentId}/delist`,

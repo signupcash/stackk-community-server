@@ -11,10 +11,12 @@ const Comment = require('../src/models/comment')
 const context = {}
 let moderatorWallet = {}
 let userWallet = {}
+let otherWallet = {}
 try {
   const walletInfo = require('../wallet.json')
   moderatorWallet = walletInfo.addresses['0']
   userWallet = walletInfo.addresses['1']
+  otherWallet = walletInfo.addresses['2']
 } catch (err) {
   console.log(
     'Could not open wallet.json. Generate a wallet with "yarn test:wallet".'
@@ -40,7 +42,7 @@ describe('routes : comments', () => {
     const commentObj = {
       txId: TX,
       replyTo: 'reply to',
-      author: 'Some Author',
+      author: userWallet.cashAddress,
       text: 'Nice comment',
       listed: true,
       edited: false
@@ -53,18 +55,62 @@ describe('routes : comments', () => {
   })
 
   describe('POST /api/v1/comment', () => {
-    it('should reject creation when data is incomplete', async () => {
+    it('should reject creation when author is missing', async () => {
       try {
         const payload = {
           text: 'incomplete data'
         }
-        const result = await testUtils.createComment(payload)
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          userWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.createComment(payload, signature)
+        console.log(
+          `result stringified: ${JSON.stringify(result.data, null, 2)}`
+        )
+        assert(false, 'Unexpected result')
+      } catch (err) {
+        assert(err.response.status === 401, 'Error code 401 expected.')
+      }
+    })
+    it('should reject creation when data is incomplete', async () => {
+      try {
+        const payload = {
+          author: context.comment.author,
+          text: 'incomplete data'
+        }
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          userWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.createComment(payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
         assert(false, 'Unexpected result')
       } catch (err) {
         assert(err.response.status === 422, 'Error code 422 expected.')
+      }
+    })
+    it('should reject creation when signature is invalid', async () => {
+      try {
+        const payload = {
+          txId: TX,
+          replyTo: context.comment.replyTo,
+          author: context.comment.author,
+          text: context.comment.text
+        }
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          otherWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.createComment(payload, signature)
+        console.log(
+          `result stringified: ${JSON.stringify(result.data, null, 2)}`
+        )
+        assert(false, 'Unexpected result')
+      } catch (err) {
+        assert(err.response.status === 401, 'Error code 401 expected.')
       }
     })
     it('should create new comment', async () => {
@@ -74,8 +120,11 @@ describe('routes : comments', () => {
         author: context.comment.author,
         text: context.comment.text
       }
-
-      const result = await testUtils.createComment(payload)
+      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+        userWallet.WIF,
+        JSON.stringify(payload, null)
+      )
+      const result = await testUtils.createComment(payload, signature)
       assert(
         result.data._id !== undefined,
         '_id expected'
@@ -93,23 +142,26 @@ describe('routes : comments', () => {
         'Text expected'
       )
       assert(
-        result.data.timestamp !== undefined,
-        'timestamp expected'
+        result.data.signature === signature,
+        'Signature expected'
       )
       assert(
-        result.data.signature === context.comment.signature,
-        'signature expected'
+        result.data.timestamp !== undefined,
+        'timestamp expected'
       )
       assert(
         result.data.txId === undefined,
         'TxId expected to be omited'
       )
-
       const checkCreated = () => (Comment.findOne({ _id: result.data._id }).exec())
       const created = await checkCreated()
       assert(
         created !== null,
         'Expected to be saved to the DB'
+      )
+      assert(
+        created.signature === signature,
+        'Expected signature to be saved to the DB'
       )
     })
     it('should sanitize text', async () => {
@@ -119,8 +171,11 @@ describe('routes : comments', () => {
         author: context.comment.author,
         text: "<div>text</div><script> Alert('xss!'); </scr" + 'ipt>'
       }
-
-      const result = await testUtils.createComment(payload)
+      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+        userWallet.WIF,
+        JSON.stringify(payload, null)
+      )
+      const result = await testUtils.createComment(payload, signature)
       assert(
         result.data.text === '<div>text</div>',
         'Text expected to be sanitized'
@@ -140,10 +195,14 @@ describe('routes : comments', () => {
     it('should throw error if commentId is missing', async () => {
       try {
         const newPayload = {
+          author: userWallet.cashAddress,
           text: 'New text'
         }
-
-        const result = await testUtils.updateComment(newPayload, savedComment._id)
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          userWallet.WIF,
+          JSON.stringify(newPayload, null)
+        )
+        const result = await testUtils.updateComment(newPayload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
@@ -155,11 +214,15 @@ describe('routes : comments', () => {
     it('should throw error on URI and payload comment ID mismatch', async () => {
       try {
         const newPayload = {
+          author: userWallet.cashAddress,
           commentId: 'non-valid',
           text: 'New text'
         }
-
-        const result = await testUtils.updateComment(newPayload, savedComment._id)
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          userWallet.WIF,
+          JSON.stringify(newPayload, null)
+        )
+        const result = await testUtils.updateComment(newPayload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
@@ -171,11 +234,15 @@ describe('routes : comments', () => {
     it('should throw error on non-existing comment', async () => {
       try {
         const newPayload = {
+          author: userWallet.cashAddress,
           commentId: 'non-valid',
           text: 'New text'
         }
-
-        const result = await testUtils.updateComment(newPayload)
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          userWallet.WIF,
+          JSON.stringify(newPayload, null)
+        )
+        const result = await testUtils.updateComment(newPayload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
@@ -184,13 +251,56 @@ describe('routes : comments', () => {
         assert(err.response.status === 404, 'Error code 404 expected.')
       }
     })
+    it('should reject update when author is missing', async () => {
+      try {
+        const newPayload = {
+          commentId: savedComment._id,
+          text: 'Edited text'
+        }
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          userWallet.WIF,
+          JSON.stringify(newPayload, null)
+        )
+        const result = await testUtils.updateComment(newPayload, signature)
+        console.log(
+          `result stringified: ${JSON.stringify(result.data, null, 2)}`
+        )
+        assert(false, 'Unexpected result')
+      } catch (err) {
+        assert(err.response.status === 401, 'Error code 401 expected.')
+      }
+    })
+    it('should reject update when signature is invalid', async () => {
+      try {
+        const newPayload = {
+          author: userWallet.cashAddress,
+          commentId: savedComment._id,
+          text: 'Edited text'
+        }
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          otherWallet.WIF,
+          JSON.stringify(newPayload, null)
+        )
+        const result = await testUtils.updateComment(newPayload, signature)
+        console.log(
+          `result stringified: ${JSON.stringify(result.data, null, 2)}`
+        )
+        assert(false, 'Unexpected result')
+      } catch (err) {
+        assert(err.response.status === 401, 'Error code 401 expected.')
+      }
+    })
     it('should edit comment data', async () => {
       const newPayload = {
+        author: userWallet.cashAddress,
         commentId: savedComment._id,
         text: 'Edited text'
       }
-
-      const result = await testUtils.updateComment(newPayload)
+      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+        userWallet.WIF,
+        JSON.stringify(newPayload, null)
+      )
+      const result = await testUtils.updateComment(newPayload, signature)
       assert(
         result.data.status === 'success',
         'success status expected'
@@ -210,7 +320,7 @@ describe('routes : comments', () => {
         'edited is expected to be true'
       )
       assert(
-        updated.signature === 'new signature',
+        updated.signature === signature,
         'signature is expected to change'
       )
     })
@@ -233,10 +343,33 @@ describe('routes : comments', () => {
     afterEach(async () => {
       await tmpComment.remove()
     })
-    it('should throw error if commentId is missing', async () => {
+    it('should reject delete when author is missing', async () => {
       try {
         const payload = {}
-        const result = await testUtils.deleteComment(payload, tmpComment._id)
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          userWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.deleteComment(payload, signature, tmpComment._id)
+        console.log(
+          `result stringified: ${JSON.stringify(result.data, null, 2)}`
+        )
+        assert(false, 'Unexpected result')
+      } catch (err) {
+        assert(err.response.status === 401, 'Error code 401 expected.')
+      }
+    })
+    it('should throw error if commentId is missing', async () => {
+      try {
+        const payload = {
+          author: userWallet.cashAddress,
+          delete: true
+        }
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          userWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.deleteComment(payload, signature, tmpComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
@@ -248,10 +381,15 @@ describe('routes : comments', () => {
     it('should throw error on URI and payload comment ID mismatch', async () => {
       try {
         const payload = {
-          commentId: 'non-valid'
+          author: userWallet.cashAddress,
+          commentId: 'non-valid',
+          delete: true
         }
-
-        const result = await testUtils.deleteComment(payload, tmpComment._id)
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          userWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.deleteComment(payload, signature, tmpComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
@@ -262,17 +400,49 @@ describe('routes : comments', () => {
     })
     it('should not throw error if comment is missing', async () => {
       const payload = {
-        commentId: 'non-existing'
+        author: userWallet.cashAddress,
+        commentId: 'non-existing',
+        delete: true
       }
-      const result = await testUtils.deleteComment(payload)
+      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+        userWallet.WIF,
+        JSON.stringify(payload, null)
+      )
+      const result = await testUtils.deleteComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       assert(result.data.status === 'success', 'success status expected')
     })
+    it('should reject deletion when signature is invalid', async () => {
+      try {
+        const payload = {
+          author: userWallet.cashAddress,
+          commentId: tmpComment._id,
+          delete: true
+        }
+        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+          otherWallet.WIF,
+          JSON.stringify(payload, null)
+        )
+        const result = await testUtils.deleteComment(payload, signature)
+        console.log(
+          `result stringified: ${JSON.stringify(result.data, null, 2)}`
+        )
+        assert(false, 'Unexpected result')
+      } catch (err) {
+        assert(err.response.status === 401, 'Error code 401 expected.')
+      }
+    })
     it('should delete comment', async () => {
       const payload = {
-        commentId: tmpComment._id
+        author: userWallet.cashAddress,
+        commentId: tmpComment._id,
+        delete: true
       }
-      const result = await testUtils.deleteComment(payload)
+      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
+        userWallet.WIF,
+        JSON.stringify(payload, null)
+      )
+      const result = await testUtils.deleteComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkDeleted = () => (Comment.findOne({ _id: payload.commentId }).exec())
       const deleted = await checkDeleted()

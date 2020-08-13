@@ -80,7 +80,6 @@ class CommentController {
         ...commentData,
         edited: true
       }
-      modifications.signature = 'new signature' // TODO: calculate signature
       await _this.Comment.findByIdAndUpdate(
         ctx.params.commentid,
         { $set: modifications },
