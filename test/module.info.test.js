@@ -3,22 +3,17 @@ const testUtils = require('./utils')
 const assert = require('chai').assert
 const axios = require('axios').default
 
-const crypto = require('../src/models/crypto')
-const Info = require('../src/models/info')
-
-const context = {}
-let moderatorWallet = {}
-let userWallet = {}
-try {
-  const walletInfo = require('../wallet.json')
-  moderatorWallet = walletInfo.addresses['0']
-  userWallet = walletInfo.addresses['1']
-} catch (err) {
+// safety first
+if (config.env !== 'test') {
   console.log(
-    'Could not open wallet.json. Generate a wallet with "yarn test:wallet".'
+    `Current environment: ${config.env} . Tests run only with test environment - KOA_ENV=test`
   )
   process.exit(0)
 }
+
+const Info = require('../src/models/info')
+
+const context = {}
 
 const LOCALHOST = `http://localhost:${config.port}`
 
@@ -109,7 +104,7 @@ describe('routes : info', () => {
         const payload = {
           description: 'incomplete data'
         }
-        const signature = await crypto.sign(payload, moderatorWallet.WIF)
+        const signature = 'IP+2N3miVDBJSLDtjewzLBzzz1KDxon6T9ovDfyP9tgacTsDul4bvi2CjJkv5Lg0jLrtaJcfeBflgywGajhMPHk='
         const result = await testUtils.updateInfo(config.moderator, payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -127,7 +122,7 @@ describe('routes : info', () => {
           description: 'new description',
           title: 'new title'
         }
-        const signature = await crypto.sign(payload, userWallet.WIF)
+        const signature = 'IO06TFZNTpxANWv8zxlcjuiziX57jDHxfgCEu2FhBGUhTdxCcGdlM1PGrK3TCC2czMZfXeb9uGE4DaVKqZVs+HA='
         const result = await testUtils.updateInfo('new-moderator', payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -144,7 +139,7 @@ describe('routes : info', () => {
         description: 'new description',
         title: 'new title'
       }
-      const signature = await crypto.sign(payload, moderatorWallet.WIF)
+      const signature = 'IPC1az5VTPkuRc7k9MM40eeQ+zbuYuivStvR+aAujoVNRIK3itU1EP4Vcrh1RS7SLTFBwy4Tgdg7hRvYdVr38og='
       const result = await testUtils.updateInfo('new-moderator', payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkCreated = () => (Info.findOne({ moderatorAddress: 'new-moderator' }).exec())
@@ -177,7 +172,7 @@ describe('routes : info', () => {
         description: 'mod description',
         title: 'mod title'
       }
-      const signature = await crypto.sign(payload, moderatorWallet.WIF)
+      const signature = 'H9LfDc1E0JHvTKQ9pNiNrnWrfOjTZjM6pGkaaDhSpatUHH0fZcgow73yvWs6/3+tsXA3WDKSCD7oU901Syc+v84='
       const result = await testUtils.updateInfo(config.moderator, payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkUpdated = () => (Info.findOne({ moderatorAddress: config.moderator }).exec())

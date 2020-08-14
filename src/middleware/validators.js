@@ -1,4 +1,4 @@
-const crypto = require('../../src/models/crypto')
+const crypto = require('../../src/crypto')
 const config = require('../../config')
 
 async function ensureSignature (ctx, next) {

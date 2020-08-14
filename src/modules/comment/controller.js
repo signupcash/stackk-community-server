@@ -80,6 +80,7 @@ class CommentController {
         ...commentData,
         edited: true
       }
+
       await _this.Comment.findByIdAndUpdate(
         ctx.params.commentid,
         { $set: modifications },
@@ -107,7 +108,7 @@ class CommentController {
         throw new Error("Property 'commentId' is invalid")
       }
 
-      await _this.Comment.findByIdAndDelete(ctx.params.commentid)
+      await _this.Comment.findByIdAndRemove(ctx.params.commentid)
 
       ctx.status = 200
       ctx.body = {
@@ -132,9 +133,10 @@ class CommentController {
       }
 
       const modifications = {
+        ...commentData,
         listed: false
       }
-      modifications.signature = 'new signature' // TODO: calculate signature
+
       await _this.Comment.findByIdAndUpdate(
         ctx.params.commentid,
         { $set: modifications },

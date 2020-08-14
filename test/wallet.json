@@ -1,0 +1,55 @@
+{
+  "addresses": {
+    "0": {
+      "cashAddress": "bitcoincash:qpkegw6mfh73vmx9f58yxdnv22mcg3l9jqks2s3dta",
+      "legacyAddress": "1AzQEEuqJiC2SXmhu3LgH3CMEEfAJfN6WP",
+      "WIF": "L1pX28ZbYA6SjCz7AhzaiGdWB4AtsSpedE8XQmAU7jhhskMqwMNA"
+    },
+    "1": {
+      "cashAddress": "bitcoincash:qr4nj7j6fe92sa5lp5jfavffu3g50r9wxc76j5a5gm",
+      "legacyAddress": "1NSkeicYzDBx1ZMLxKXEdJcNX5SWoHbrNh",
+      "WIF": "Kxpu3nsCm84bxpBheUcefMnfyWKiEh3beGzNVzzUgxMq9bh5un3b"
+    },
+    "2": {
+      "cashAddress": "bitcoincash:qqdqpwjng8sxfyuwhk7l5g6hhkl6c3uqkuuhfca2hd",
+      "legacyAddress": "13NVSZP9YqDkWjQKKJJA54YKf21r6Gsc5Z",
+      "WIF": "Kzt4N2ipXpNctcBPEMbPjiXX5hAyCgriTo4Abf3cPTTz8HrThqSg"
+    },
+    "3": {
+      "cashAddress": "bitcoincash:qrr924znrtd6amyp4q208x2jckcfwky6uusnvp74lc",
+      "legacyAddress": "1K5h1mp1AReu7mcFBp1GaXkQSkKbbp66eW",
+      "WIF": "KwR36b1eLzpbUW5TNxLCtVg3iZgrnZrfnZqTLnfhgKpCaYwj2uJZ"
+    },
+    "4": {
+      "cashAddress": "bitcoincash:qrne9frphwq2sw8j6gcpdrgpyj5r857mwytqrplyp4",
+      "legacyAddress": "1N7SmBmf8p8MJrR2yeFVs4xGir6pvkA4vp",
+      "WIF": "KzmXtei4z8sHgPtA29NwPzgjQ7tpT8H1DaTTKNdBPBMuJMXBBvx6"
+    },
+    "5": {
+      "cashAddress": "bitcoincash:qp7te6p0tg2at8njwgpl02cexg0mh4q3fvtt30r8y5",
+      "legacyAddress": "1CNZ6Gs9kyNQB2tAWixbysGqGmKeJ66pVh",
+      "WIF": "KxZ6Kbi2j6WJufJmpuEUSui1j8Axe2r4uqNDnJqt9XeKRwi2VJbP"
+    },
+    "6": {
+      "cashAddress": "bitcoincash:qqrdx2yjwu4jt2vu4hhutqtv2jrj4jurhsmpcq7l7r",
+      "legacyAddress": "1d61has9WuNrXX8WgTKV6DnSSrQfKMz8v",
+      "WIF": "L3zHFW3uVNzAnyAtv2CkyAjCmnYz7oyVnXJvkZtXLPG5S5NHtZW3"
+    },
+    "7": {
+      "cashAddress": "bitcoincash:qr97cm0rsh3svp3grfsfur8c777dsk066yx98r9mzj",
+      "legacyAddress": "1KbFQLNnnimyzX6Azy8R9eGBCsYE57PcVW",
+      "WIF": "KwGKyqvGsHj8HRYqjxDECFMgncGV7b1JhKT3EQ3ZJExng7pSqgMS"
+    },
+    "8": {
+      "cashAddress": "bitcoincash:qqpgwcylhedwqedc0e3hz6d3xl5fx7d9dc6unslec7",
+      "legacyAddress": "1ENXaEJTonhxH85Nd2YwWCFqXgEjshPMA",
+      "WIF": "L3uALzDVFAWxXJ9Cjxr6hcy3f3dMTEWCxXxsMapWwrub6EwpNV5r"
+    },
+    "9": {
+      "cashAddress": "bitcoincash:qq995afvk6gppvumrh0s2x5mf2z2rad20uah9pa9r7",
+      "legacyAddress": "1wk82mMFsJdGh3WXEMJin9nkUDJwdhYjk",
+      "WIF": "KwqjPn9rMHdU6mGmDQDHCd1Ws2m6cDsXAQo1hnRuCRXJSebEp8sq"
+    }
+  },
+  "mnemonic": "duck bullet naive like critic rice dizzy crop frame average elephant thunder"
+}

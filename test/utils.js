@@ -1,21 +1,7 @@
-const mongoose = require('mongoose')
 const config = require('../config')
 const axios = require('axios').default
 
 const LOCALHOST = `http://localhost:${config.port}`
-
-// Remove all collections from the DB.
-async function cleanDb () {
-  for (const collection in mongoose.connection.collections) {
-    const collections = mongoose.connection.collections
-    if (collections.collection) {
-      // const thisCollection = mongoose.connection.collections[collection]
-      // console.log(`thisCollection: ${JSON.stringify(thisCollection, null, 2)}`)
-
-      await collection.deleteMany()
-    }
-  }
-}
 
 // This function is used to create new comments
 // payload = {
@@ -132,7 +118,6 @@ async function updateInfo (moderator, payload, signature) {
 }
 
 module.exports = {
-  cleanDb,
   createComment,
   updateComment,
   deleteComment,

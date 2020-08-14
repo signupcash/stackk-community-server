@@ -2,26 +2,22 @@ const app = require('../bin/server')
 const config = require('../config')
 const testUtils = require('./utils')
 const assert = require('chai').assert
+const sinon = require('sinon')
+const MockMongooseModel = require('mock-mongoose-model')
 const axios = require('axios').default
 
-const crypto = require('../src/models/crypto')
 const Comment = require('../src/models/comment')
 
-const context = {}
-let moderatorWallet = {}
-let userWallet = {}
-let otherWallet = {}
-try {
-  const walletInfo = require('../wallet.json')
-  moderatorWallet = walletInfo.addresses['0']
-  userWallet = walletInfo.addresses['1']
-  otherWallet = walletInfo.addresses['2']
-} catch (err) {
+// safety first
+if (config.env !== 'test') {
   console.log(
-    'Could not open wallet.json. Generate a wallet with "yarn test:wallet".'
+    `Current environment: ${config.env} . Tests run only with test environment - KOA_ENV=test`
   )
   process.exit(0)
 }
+
+const context = {}
+const userAddr = 'bitcoincash:qr4nj7j6fe92sa5lp5jfavffu3g50r9wxc76j5a5gm'
 
 const LOCALHOST = `http://localhost:${config.port}`
 const TX = '123456789'
@@ -38,19 +34,39 @@ describe('routes : comments', () => {
       await thisComment.remove()
     }
 
-    const commentObj = {
-      txId: TX,
-      replyTo: 'reply to',
-      author: userWallet.cashAddress,
-      text: 'Nice comment',
+    const testComment = {
       listed: true,
-      edited: false
+      edited: false,
+      _id: '5f36a2b885f14576646c1baa',
+      txId: '123456789',
+      replyTo: 'reply to',
+      author: userAddr,
+      text: 'Nice comment',
+      signature: 'signed',
+      __v: 0
     }
-    commentObj.signature = 'signed' // TODO: calculate real dignature
+    await new Comment(testComment).save()
 
-    const testComment = new Comment(commentObj)
-    await testComment.save()
+    const deleteComment = {
+      listed: true,
+      edited: false,
+      _id: '5f36a2b885f14576646c1bab',
+      txId: '123456789',
+      replyTo: 'reply to',
+      author: userAddr,
+      text: 'Nice comment',
+      signature: 'signed',
+      __v: 0
+    }
+    await new Comment(deleteComment).save()
+
     context.comment = testComment
+    context.delete = deleteComment
+    sinon.stub(MockMongooseModel, 'findByIdAndRemove').yields(null, deleteComment)
+    sinon.stub(MockMongooseModel, 'findByIdAndUpdate').yields(null, testComment)
+    sinon.stub(MockMongooseModel, 'findOne').yields(null, testComment)
+    sinon.stub(MockMongooseModel, 'exec').yields(null, testComment)
+    sinon.stub(MockMongooseModel, 'find').yields(null, [testComment])
   })
 
   describe('POST /api/v1/comment', () => {
@@ -59,7 +75,7 @@ describe('routes : comments', () => {
         const payload = {
           text: 'incomplete data'
         }
-        const signature = await crypto.sign(payload, userWallet.WIF)
+        const signature = 'H2xGkXY9ZFQ8+YVZPHvg6peKEqunqUggrAbFhfYrbiM5O78giofZySNGekZd9fsYzbz3/U03h/xdCjVuVVs29bI='
         const result = await testUtils.createComment(payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -75,7 +91,7 @@ describe('routes : comments', () => {
           author: context.comment.author,
           text: 'incomplete data'
         }
-        const signature = await crypto.sign(payload, userWallet.WIF)
+        const signature = 'IGNJ1BWlaUcL6JQpCLEMx8ZbaMNzd2UHWd2BxV0NPR5bHQroMUt3kze2bBpQl1AkygnEmV53hH9Q9+scoQf3G4M='
         const result = await testUtils.createComment(payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -93,7 +109,7 @@ describe('routes : comments', () => {
           author: context.comment.author,
           text: context.comment.text
         }
-        const signature = await crypto.sign(payload, otherWallet.WIF)
+        const signature = 'H3uAQR5MxJHOIFumXpZk56dlVojEb4QWV5AlTZhOvO+eG5+rKZXRITsvqpA+FM5o79wBetUgS+b6n/87WE4VznM='
         const result = await testUtils.createComment(payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -110,7 +126,7 @@ describe('routes : comments', () => {
         author: context.comment.author,
         text: context.comment.text
       }
-      const signature = await crypto.sign(payload, userWallet.WIF)
+      const signature = 'ICiRlC0F8ZCv1jz76wn2VvKF4FIUs1WXIqXTCpEn04J0Md6+RQjIpE5RlxxyQloKg3EaB14WSVAYjZVMWFs1yVA='
       const result = await testUtils.createComment(payload, signature)
       assert(
         result.data._id !== undefined,
@@ -158,7 +174,7 @@ describe('routes : comments', () => {
         author: context.comment.author,
         text: "<div>text</div><script> Alert('xss!'); </scr" + 'ipt>'
       }
-      const signature = await crypto.sign(payload, userWallet.WIF)
+      const signature = 'IAbZSgAeI/N76KmVp7UHmjatvKHSVzu3z4MpYxYXd5+fGw73PaZfadLqz+PGxUR/cps82wr8tnQzD3mN67JNVk0='
       const result = await testUtils.createComment(payload, signature)
       assert(
         result.data.text === '<div>text</div>',
@@ -179,10 +195,10 @@ describe('routes : comments', () => {
     it('should throw error if commentId is missing', async () => {
       try {
         const newPayload = {
-          author: userWallet.cashAddress,
+          author: userAddr,
           text: 'New text'
         }
-        const signature = await crypto.sign(newPayload, userWallet.WIF)
+        const signature = 'H8ZNZS2nOxK6K+KCK/dgSzfSG8fgGhaMJkscaIHE4CEAGD80RdcclJfIav0Pbs2QCh0OWf7yH2GhMQZ3K03DxR8='
         const result = await testUtils.updateComment(newPayload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -195,11 +211,11 @@ describe('routes : comments', () => {
     it('should throw error on URI and payload comment ID mismatch', async () => {
       try {
         const newPayload = {
-          author: userWallet.cashAddress,
+          author: userAddr,
           commentId: 'non-valid',
           text: 'New text'
         }
-        const signature = await crypto.sign(newPayload, userWallet.WIF)
+        const signature = 'IDR272QzMLY+0LVKTHuvJcn5OZ0O62fR3fA9l7JSqoKcaxloWtbZmVuO0qsNLyf2epfJR21yvAJ5j1EZYxmxwvM='
         const result = await testUtils.updateComment(newPayload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -212,11 +228,11 @@ describe('routes : comments', () => {
     it('should throw error on non-existing comment', async () => {
       try {
         const newPayload = {
-          author: userWallet.cashAddress,
+          author: userAddr,
           commentId: 'non-valid',
           text: 'New text'
         }
-        const signature = await crypto.sign(newPayload, userWallet.WIF)
+        const signature = 'IDR272QzMLY+0LVKTHuvJcn5OZ0O62fR3fA9l7JSqoKcaxloWtbZmVuO0qsNLyf2epfJR21yvAJ5j1EZYxmxwvM='
         const result = await testUtils.updateComment(newPayload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -232,7 +248,7 @@ describe('routes : comments', () => {
           commentId: savedComment._id,
           text: 'Edited text'
         }
-        const signature = await crypto.sign(newPayload, userWallet.WIF)
+        const signature = 'IM27SjG1e/iXEIWYJ5Kkvc3EFXpa70b5CnDXgaSYUaLgNEfG2lDSBWuRr7mjxpoRQgOTO1nrxcrc5McESesUxIE='
         const result = await testUtils.updateComment(newPayload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -245,11 +261,11 @@ describe('routes : comments', () => {
     it('should reject update when signature is invalid', async () => {
       try {
         const newPayload = {
-          author: userWallet.cashAddress,
+          author: userAddr,
           commentId: savedComment._id,
           text: 'Edited text'
         }
-        const signature = await crypto.sign(newPayload, otherWallet.WIF)
+        const signature = 'H1/8MtPSvcToRr2YRjWaNOD5xKLPsTCC4ataa4glOuIQI9RSxPjRX6Yd1bFbYNwn2xmudfb33A+inBHWtGaZEr8='
         const result = await testUtils.updateComment(newPayload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -261,11 +277,11 @@ describe('routes : comments', () => {
     })
     it('should edit comment data', async () => {
       const newPayload = {
-        author: userWallet.cashAddress,
+        author: userAddr,
         commentId: savedComment._id,
         text: 'Edited text'
       }
-      const signature = await crypto.sign(newPayload, userWallet.WIF)
+      const signature = 'IL0J7JW42sQTiJuLBGlG+GZpbyInvRv3iM/muXVyxR6mWbdnvxVsKUDBsLVxul6/QdachnkWT+UH5BIMNjf78k0='
       const result = await testUtils.updateComment(newPayload, signature)
       assert(
         result.data.status === 'success',
@@ -293,27 +309,11 @@ describe('routes : comments', () => {
   })
 
   describe('DELETE /api/v1/comment/:commentid', () => {
-    let tmpComment
-
-    beforeEach(async () => {
-      const commentObj = {
-        txId: TX,
-        replyTo: context.comment.replyTo,
-        author: context.comment.author,
-        text: context.comment.text,
-        signature: 'sign'
-      }
-      tmpComment = new Comment(commentObj)
-      await tmpComment.save()
-    })
-    afterEach(async () => {
-      await tmpComment.remove()
-    })
     it('should reject delete when author is missing', async () => {
       try {
         const payload = {}
-        const signature = await crypto.sign(payload, userWallet.WIF)
-        const result = await testUtils.deleteComment(payload, signature, tmpComment._id)
+        const signature = 'IKdHXYCR36D1er9eDS30wKVt382cP/7OYF68Xaxy8NLjUyFB+GqzNzwMQGixyHCWeEThNcqEqBL7o11AhJ0l14w='
+        const result = await testUtils.deleteComment(payload, signature, context.delete._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
@@ -325,11 +325,11 @@ describe('routes : comments', () => {
     it('should throw error if commentId is missing', async () => {
       try {
         const payload = {
-          author: userWallet.cashAddress,
+          author: userAddr,
           delete: true
         }
-        const signature = await crypto.sign(payload, userWallet.WIF)
-        const result = await testUtils.deleteComment(payload, signature, tmpComment._id)
+        const signature = 'H+sTxLR3qYjEtPnndg03lEcdvsu6wMlGRV8VjtVSR4m4R46NUP/iyOl7Jwo0RT9pizvJdfLnJvc5u2uVdZUvAsg='
+        const result = await testUtils.deleteComment(payload, signature, context.delete._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
@@ -341,12 +341,12 @@ describe('routes : comments', () => {
     it('should throw error on URI and payload comment ID mismatch', async () => {
       try {
         const payload = {
-          author: userWallet.cashAddress,
+          author: 'bitcoincash:qr4nj7j6fe92sa5lp5jfavffu3g50r9wxc76j5a5gm',
           commentId: 'non-valid',
           delete: true
         }
-        const signature = await crypto.sign(payload, userWallet.WIF)
-        const result = await testUtils.deleteComment(payload, signature, tmpComment._id)
+        const signature = 'IFuG5JRuujbSosOrlDLnDNg+F6comVhVG8rI5Fr1CMAJQdA+AZ4DoopULRCNdBwP1g6lnEtDqJzyNnellbsRvJs='
+        const result = await testUtils.deleteComment(payload, signature, context.delete._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
         )
@@ -357,11 +357,11 @@ describe('routes : comments', () => {
     })
     it('should not throw error if comment is missing', async () => {
       const payload = {
-        author: userWallet.cashAddress,
+        author: userAddr,
         commentId: 'non-existing',
         delete: true
       }
-      const signature = await crypto.sign(payload, userWallet.WIF)
+      const signature = 'Hzov2zCXvsfIBMQtOuJkBYQIFFNsqTE8ZHfhNSiwnvz0Ta9lLSwonmyEI5OqiBGgKOq1jT+GjGyGPD12nsp/ox8='
       const result = await testUtils.deleteComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       assert(result.data.status === 'success', 'success status expected')
@@ -369,11 +369,11 @@ describe('routes : comments', () => {
     it('should reject deletion when signature is invalid', async () => {
       try {
         const payload = {
-          author: userWallet.cashAddress,
-          commentId: tmpComment._id,
+          author: userAddr,
+          commentId: context.delete._id,
           delete: true
         }
-        const signature = await crypto.sign(payload, otherWallet.WIF)
+        const signature = 'IIvqJ7U54MnJ+kNJRFnrqO6fwqXKg8HZrbqwuOE2Y0rhSFfzEAG9LE5K1AgHV1UX824PMayfbTW4EIPpFNZ3tLE='
         const result = await testUtils.deleteComment(payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -385,11 +385,11 @@ describe('routes : comments', () => {
     })
     it('should delete comment', async () => {
       const payload = {
-        author: userWallet.cashAddress,
-        commentId: tmpComment._id,
+        author: userAddr,
+        commentId: context.delete._id,
         delete: true
       }
-      const signature = await crypto.sign(payload, userWallet.WIF)
+      const signature = 'IEzhDln47hPwdFnJESP6MX7XNSCUosjvrCONK0akWPSEFie2l+7ZBArt1tH2gHp7gkDdfpFP9FXbLcp5BaJx1Jo='
       const result = await testUtils.deleteComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkDeleted = () => (Comment.findOne({ _id: payload.commentId }).exec())
@@ -427,7 +427,7 @@ describe('routes : comments', () => {
     it('should throw error if commentId is missing', async () => {
       try {
         const payload = {}
-        const signature = await crypto.sign(payload, moderatorWallet.WIF)
+        const signature = 'IDOesebaxnpgatynMhtYxVVF+TWd2axeRoBFG9L8JEaLb2FjJZOnh2Anpp18Nu7DELIkQWvO1ULovTESbdruz1Q='
         const result = await testUtils.delistComment(payload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -442,7 +442,7 @@ describe('routes : comments', () => {
         const payload = {
           commentId: 'non-valid'
         }
-        const signature = await crypto.sign(payload, moderatorWallet.WIF)
+        const signature = 'H3thgJBc++kob4d3foaLR2jIj8C+dFBklccil0FtxKkcEBalJZ9lWN5JYI4Q2OdWtHPaxa7P0i8CD5XIaSrJUGs='
         const result = await testUtils.delistComment(payload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -456,7 +456,7 @@ describe('routes : comments', () => {
       const payload = {
         commentId: 'non-existing'
       }
-      const signature = await crypto.sign(payload, moderatorWallet.WIF)
+      const signature = 'H4j6/LLVDvrjvmFK1+tSqvrZcP9ZFUwmZ7bwvqGMQodcHkXWqBhSzCEkQjM5M4BqDIVfy0PDwF7ur91NiV5Z/2Q='
       const result = await testUtils.delistComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       assert(result.data.status === 'success', 'success status expected')
@@ -466,7 +466,7 @@ describe('routes : comments', () => {
         const payload = {
           commentId: savedComment._id
         }
-        const signature = await crypto.sign(payload, userWallet.WIF)
+        const signature = 'H3m1BL57yPuMmkx0TQ3D6N8i5r1PwUfPfi9kCGmBB0fdN0b+F4EarohiYQB69ztC63VwJ+QsIM43W1S/O1oauHM='
         const result = await testUtils.delistComment(payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -480,14 +480,14 @@ describe('routes : comments', () => {
       const payload = {
         commentId: savedComment._id
       }
-      const signature = await crypto.sign(payload, moderatorWallet.WIF)
+      const signature = 'H+pJ7lkNQE5sR9jx/t/UgLbKMvadAfzS67h2EbietlxwDrhHTNyQvflOF+0aGzW09PXctXmVC22uxEU5xdeCpDg='
       const result = await testUtils.delistComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkDelisted = () => (Comment.findOne({ _id: payload.commentId }).exec())
       const delisted = await checkDelisted()
       assert(
         delisted.listed === false,
-        'commend delist expected'
+        'comment delist expected'
       )
     })
   })

@@ -11,7 +11,6 @@ class InfoController {
   async createInfo (ctx) {
     try {
       const infoData = ctx.request.body.payload
-      // TODO: check ctx.request.body.signature for config.moderator
 
       infoData.moderatorAddress = ctx.params.moderator
       // Requirements check
