@@ -1,10 +1,9 @@
-const BCHJS = require('@chris.troutner/bch-js')
-const bchjs = new BCHJS()
 const config = require('../config')
 const testUtils = require('./utils')
 const assert = require('chai').assert
 const axios = require('axios').default
 
+const crypto = require('../src/models/crypto')
 const Info = require('../src/models/info')
 
 const context = {}
@@ -110,10 +109,7 @@ describe('routes : info', () => {
         const payload = {
           description: 'incomplete data'
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          moderatorWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, moderatorWallet.WIF)
         const result = await testUtils.updateInfo(config.moderator, payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -131,10 +127,7 @@ describe('routes : info', () => {
           description: 'new description',
           title: 'new title'
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          userWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, userWallet.WIF)
         const result = await testUtils.updateInfo('new-moderator', payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -151,11 +144,7 @@ describe('routes : info', () => {
         description: 'new description',
         title: 'new title'
       }
-
-      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-        moderatorWallet.WIF,
-        JSON.stringify(payload, null)
-      )
+      const signature = await crypto.sign(payload, moderatorWallet.WIF)
       const result = await testUtils.updateInfo('new-moderator', payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkCreated = () => (Info.findOne({ moderatorAddress: 'new-moderator' }).exec())
@@ -188,11 +177,7 @@ describe('routes : info', () => {
         description: 'mod description',
         title: 'mod title'
       }
-
-      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-        moderatorWallet.WIF,
-        JSON.stringify(payload, null)
-      )
+      const signature = await crypto.sign(payload, moderatorWallet.WIF)
       const result = await testUtils.updateInfo(config.moderator, payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkUpdated = () => (Info.findOne({ moderatorAddress: config.moderator }).exec())

@@ -1,5 +1,4 @@
-const BCHJS = require('@chris.troutner/bch-js')
-const bchjs = new BCHJS()
+const crypto = require('../../src/models/crypto')
 const config = require('../../config')
 
 async function ensureSignature (ctx, next) {
@@ -9,11 +8,7 @@ async function ensureSignature (ctx, next) {
     if (!payload.author || payload.author === '') {
       ctx.throw(401)
     }
-    const verified = await bchjs.BitcoinCash.verifyMessage(
-      payload.author,
-      signature,
-      JSON.stringify(payload, null)
-    )
+    const verified = await crypto.verify(payload, signature, payload.author)
     if (verified !== true) {
       ctx.throw(401)
     }
@@ -30,11 +25,7 @@ async function ensureModSignature (ctx, next) {
     }
     const signature = ctx.request.body.signature
     const payload = ctx.request.body.payload
-    const verified = await bchjs.BitcoinCash.verifyMessage(
-      config.moderator,
-      signature,
-      JSON.stringify(payload, null)
-    )
+    const verified = await crypto.verify(payload, signature, config.moderator)
     if (verified !== true) {
       ctx.throw(401)
     }

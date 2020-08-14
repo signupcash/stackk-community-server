@@ -1,11 +1,10 @@
-const BCHJS = require('@chris.troutner/bch-js')
-const bchjs = new BCHJS()
 const app = require('../bin/server')
 const config = require('../config')
 const testUtils = require('./utils')
 const assert = require('chai').assert
 const axios = require('axios').default
 
+const crypto = require('../src/models/crypto')
 const Comment = require('../src/models/comment')
 
 const context = {}
@@ -60,10 +59,7 @@ describe('routes : comments', () => {
         const payload = {
           text: 'incomplete data'
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          userWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, userWallet.WIF)
         const result = await testUtils.createComment(payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -79,10 +75,7 @@ describe('routes : comments', () => {
           author: context.comment.author,
           text: 'incomplete data'
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          userWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, userWallet.WIF)
         const result = await testUtils.createComment(payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -100,10 +93,7 @@ describe('routes : comments', () => {
           author: context.comment.author,
           text: context.comment.text
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          otherWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, otherWallet.WIF)
         const result = await testUtils.createComment(payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -120,10 +110,7 @@ describe('routes : comments', () => {
         author: context.comment.author,
         text: context.comment.text
       }
-      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-        userWallet.WIF,
-        JSON.stringify(payload, null)
-      )
+      const signature = await crypto.sign(payload, userWallet.WIF)
       const result = await testUtils.createComment(payload, signature)
       assert(
         result.data._id !== undefined,
@@ -171,10 +158,7 @@ describe('routes : comments', () => {
         author: context.comment.author,
         text: "<div>text</div><script> Alert('xss!'); </scr" + 'ipt>'
       }
-      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-        userWallet.WIF,
-        JSON.stringify(payload, null)
-      )
+      const signature = await crypto.sign(payload, userWallet.WIF)
       const result = await testUtils.createComment(payload, signature)
       assert(
         result.data.text === '<div>text</div>',
@@ -198,10 +182,7 @@ describe('routes : comments', () => {
           author: userWallet.cashAddress,
           text: 'New text'
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          userWallet.WIF,
-          JSON.stringify(newPayload, null)
-        )
+        const signature = await crypto.sign(newPayload, userWallet.WIF)
         const result = await testUtils.updateComment(newPayload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -218,10 +199,7 @@ describe('routes : comments', () => {
           commentId: 'non-valid',
           text: 'New text'
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          userWallet.WIF,
-          JSON.stringify(newPayload, null)
-        )
+        const signature = await crypto.sign(newPayload, userWallet.WIF)
         const result = await testUtils.updateComment(newPayload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -238,10 +216,7 @@ describe('routes : comments', () => {
           commentId: 'non-valid',
           text: 'New text'
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          userWallet.WIF,
-          JSON.stringify(newPayload, null)
-        )
+        const signature = await crypto.sign(newPayload, userWallet.WIF)
         const result = await testUtils.updateComment(newPayload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -257,10 +232,7 @@ describe('routes : comments', () => {
           commentId: savedComment._id,
           text: 'Edited text'
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          userWallet.WIF,
-          JSON.stringify(newPayload, null)
-        )
+        const signature = await crypto.sign(newPayload, userWallet.WIF)
         const result = await testUtils.updateComment(newPayload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -277,10 +249,7 @@ describe('routes : comments', () => {
           commentId: savedComment._id,
           text: 'Edited text'
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          otherWallet.WIF,
-          JSON.stringify(newPayload, null)
-        )
+        const signature = await crypto.sign(newPayload, otherWallet.WIF)
         const result = await testUtils.updateComment(newPayload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -296,10 +265,7 @@ describe('routes : comments', () => {
         commentId: savedComment._id,
         text: 'Edited text'
       }
-      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-        userWallet.WIF,
-        JSON.stringify(newPayload, null)
-      )
+      const signature = await crypto.sign(newPayload, userWallet.WIF)
       const result = await testUtils.updateComment(newPayload, signature)
       assert(
         result.data.status === 'success',
@@ -346,10 +312,7 @@ describe('routes : comments', () => {
     it('should reject delete when author is missing', async () => {
       try {
         const payload = {}
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          userWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, userWallet.WIF)
         const result = await testUtils.deleteComment(payload, signature, tmpComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -365,10 +328,7 @@ describe('routes : comments', () => {
           author: userWallet.cashAddress,
           delete: true
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          userWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, userWallet.WIF)
         const result = await testUtils.deleteComment(payload, signature, tmpComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -385,10 +345,7 @@ describe('routes : comments', () => {
           commentId: 'non-valid',
           delete: true
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          userWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, userWallet.WIF)
         const result = await testUtils.deleteComment(payload, signature, tmpComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -404,10 +361,7 @@ describe('routes : comments', () => {
         commentId: 'non-existing',
         delete: true
       }
-      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-        userWallet.WIF,
-        JSON.stringify(payload, null)
-      )
+      const signature = await crypto.sign(payload, userWallet.WIF)
       const result = await testUtils.deleteComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       assert(result.data.status === 'success', 'success status expected')
@@ -419,10 +373,7 @@ describe('routes : comments', () => {
           commentId: tmpComment._id,
           delete: true
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          otherWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, otherWallet.WIF)
         const result = await testUtils.deleteComment(payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -438,10 +389,7 @@ describe('routes : comments', () => {
         commentId: tmpComment._id,
         delete: true
       }
-      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-        userWallet.WIF,
-        JSON.stringify(payload, null)
-      )
+      const signature = await crypto.sign(payload, userWallet.WIF)
       const result = await testUtils.deleteComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkDeleted = () => (Comment.findOne({ _id: payload.commentId }).exec())
@@ -479,10 +427,7 @@ describe('routes : comments', () => {
     it('should throw error if commentId is missing', async () => {
       try {
         const payload = {}
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          moderatorWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, moderatorWallet.WIF)
         const result = await testUtils.delistComment(payload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -497,10 +442,7 @@ describe('routes : comments', () => {
         const payload = {
           commentId: 'non-valid'
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          moderatorWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, moderatorWallet.WIF)
         const result = await testUtils.delistComment(payload, signature, savedComment._id)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -514,10 +456,7 @@ describe('routes : comments', () => {
       const payload = {
         commentId: 'non-existing'
       }
-      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-        moderatorWallet.WIF,
-        JSON.stringify(payload, null)
-      )
+      const signature = await crypto.sign(payload, moderatorWallet.WIF)
       const result = await testUtils.delistComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       assert(result.data.status === 'success', 'success status expected')
@@ -527,10 +466,7 @@ describe('routes : comments', () => {
         const payload = {
           commentId: savedComment._id
         }
-        const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-          userWallet.WIF,
-          JSON.stringify(payload, null)
-        )
+        const signature = await crypto.sign(payload, userWallet.WIF)
         const result = await testUtils.delistComment(payload, signature)
         console.log(
           `result stringified: ${JSON.stringify(result.data, null, 2)}`
@@ -544,10 +480,7 @@ describe('routes : comments', () => {
       const payload = {
         commentId: savedComment._id
       }
-      const signature = bchjs.BitcoinCash.signMessageWithPrivKey(
-        moderatorWallet.WIF,
-        JSON.stringify(payload, null)
-      )
+      const signature = await crypto.sign(payload, moderatorWallet.WIF)
       const result = await testUtils.delistComment(payload, signature)
       assert(result.status === 200, 'Status Code 200 expected.')
       const checkDelisted = () => (Comment.findOne({ _id: payload.commentId }).exec())
